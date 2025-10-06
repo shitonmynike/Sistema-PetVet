@@ -1,0 +1,309 @@
+/**
+ * Estilos personalizados para PetVet
+ */
+
+/* Variáveis CSS para cores da marca */
+:root {
+    --petvet-primary: #2c5aa0;
+    --petvet-secondary: #28a745;
+    --petvet-accent: #ffc107;
+    --petvet-light: #f8f9fa;
+    --petvet-dark: #343a40;
+    --petvet-border: #dee2e6;
+}
+
+/* Estilos gerais */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--petvet-light);
+}
+
+/* Header personalizado */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: var(--petvet-primary) !important;
+}
+
+.navbar-dark .navbar-brand {
+    color: white !important;
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: white;
+    border-right: 1px solid var(--petvet-border);
+    min-height: calc(100vh - 56px);
+    box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+}
+
+.nav-pills .nav-link {
+    color: var(--petvet-dark);
+    border-radius: 8px;
+    margin-bottom: 4px;
+    transition: all 0.3s ease;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: rgba(44, 90, 160, 0.1);
+    color: var(--petvet-primary);
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--petvet-primary);
+    color: white;
+}
+
+.nav-pills .nav-link i {
+    margin-right: 8px;
+    width: 16px;
+}
+
+/* Conteúdo principal */
+.main-content {
+    padding: 2rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin: 1rem;
+}
+
+/* Cards de agendamento */
+.appointment-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 1rem;
+}
+
+.appointment-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.appointment-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--petvet-primary), var(--petvet-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Tabelas */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.table thead th {
+    background-color: var(--petvet-primary);
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 1rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(44, 90, 160, 0.05);
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-color: var(--petvet-border);
+}
+
+/* Botões */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--petvet-primary);
+    border-color: var(--petvet-primary);
+}
+
+.btn-primary:hover {
+    background-color: #1e3d6f;
+    border-color: #1e3d6f;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: var(--petvet-secondary);
+    border-color: var(--petvet-secondary);
+}
+
+.btn-warning {
+    background-color: var(--petvet-accent);
+    border-color: var(--petvet-accent);
+    color: var(--petvet-dark);
+}
+
+.btn-group .btn {
+    margin-right: 4px;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+/* Modais */
+.modal-header {
+    background-color: var(--petvet-primary);
+    color: white;
+    border-bottom: none;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--petvet-border);
+    padding: 1rem 2rem;
+}
+
+/* Formulários */
+.form-label {
+    font-weight: 600;
+    color: var(--petvet-dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 2px solid var(--petvet-border);
+    padding: 0.75rem 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--petvet-primary);
+    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--petvet-primary);
+    border-color: var(--petvet-primary);
+}
+
+/* Alertas */
+.alert {
+    border: none;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #155724;
+    border-left: 4px solid var(--petvet-secondary);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.alert-info {
+    background-color: rgba(44, 90, 160, 0.1);
+    color: #0c5460;
+    border-left: 4px solid var(--petvet-primary);
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.spinner-border {
+    color: var(--petvet-primary);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .main-content {
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .table-responsive {
+        border-radius: 8px;
+    }
+    
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .btn-group .btn {
+        margin-right: 0;
+        margin-bottom: 4px;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Utilitários */
+.text-petvet-primary {
+    color: var(--petvet-primary) !important;
+}
+
+.bg-petvet-primary {
+    background-color: var(--petvet-primary) !important;
+}
+
+.border-petvet-primary {
+    border-color: var(--petvet-primary) !important;
+}
+
+/* Estados vazios */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
