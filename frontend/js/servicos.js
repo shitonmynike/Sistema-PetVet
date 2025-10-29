@@ -11,8 +11,8 @@ class ServicosManager {
      * Determina a URL do servidor baseada no ambiente
      */
     getServidorUrl() {
-        const isLocalhost = location.hostname === "localhost";
-        return isLocalhost ? "http://localhost:3003" : "https://petvet-back-sjv0.onrender.com";
+        // Usa a variável global definida em config.js
+        return window.API_URL || "http://localhost:3003/api";
     }
 
     /**
@@ -20,6 +20,7 @@ class ServicosManager {
      */
     init() {
         $(document).ready(() => {
+            this.checkAuth();
             this.setupEventListeners();
             this.listarServicos();
         });
@@ -29,7 +30,7 @@ class ServicosManager {
      * Configura todos os event listeners
      */
     setupEventListeners() {
-        // Botão de cadastrar novo serviço
+        // Botão de cadastrar novo serviço (mantido, mas pode ser removido se o usuário não for admin)
         $("#bt-novo-servico").click(() => this.abrirModalCadastro());
 
         // Botão salvar (cadastro)
@@ -52,11 +53,61 @@ class ServicosManager {
             this.prepararExclusao(id);
         });
 
+        // NOVO: Event listener para o botão de Agendar Atendimento
+        $("#lista-servico").on("click", ".bt-agendar", (e) => {
+            const id = $(e.target).attr("servico-id");
+            const nome = $(e.target).attr("servico-nome");
+            this.abrirModalAgendamento(id, nome);
+        });
+
+        // NOVO: Event listener para o formulário de agendamento
+        $("#form-agendamento").submit((e) => {
+            e.preventDefault();
+            this.agendarAtendimento();
+        });
+
         // Fechar alertas automaticamente
         $(".alert .btn-close").click(function() {
             $(this).parent().addClass("d-none");
         });
     }
+
+    /**
+     * Verifica o estado de autenticação e atualiza o botão de login/logout
+     */
+    checkAuth() {
+        const token = localStorage.getItem('petvet_token');
+        const user = JSON.parse(localStorage.getItem('petvet_user'));
+        const authButton = document.getElementById('authButton');
+        
+        if (token && user) {
+            authButton.innerHTML = `<i class="bi bi-box-arrow-right me-1"></i> Sair (${user.name.split(' ')[0]})`;
+            authButton.classList.remove('btn-outline-light');
+            authButton.classList.add('btn-danger');
+        } else {
+            authButton.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Login';
+            authButton.classList.remove('btn-danger');
+            authButton.classList.add('btn-outline-light');
+        }
+    }
+
+    /**
+     * Função para lidar com o clique no botão de autenticação (usada no HTML)
+     */
+    handleAuthClick() {
+        const token = localStorage.getItem('petvet_token');
+        if (token) {
+            // Logout
+            localStorage.removeItem('petvet_token');
+            localStorage.removeItem('petvet_user');
+            this.checkAuth();
+            window.location.href = '../index.html'; 
+        } else {
+            // Login
+            window.location.href = 'auth.html';
+        }
+    }
+
 
     /**
      * Lista todos os serviços
@@ -65,7 +116,8 @@ class ServicosManager {
         try {
             this.showLoading(true);
             
-            const response = await $.getJSON(`${this.servidor}/api/servicos`);
+            // Ajuste para usar a URL correta com /api
+            const response = await $.getJSON(`${this.servidor}/servicos`);
             const servicos = response.dados || response;
 
             this.renderizarTabela(servicos);
@@ -88,7 +140,7 @@ class ServicosManager {
         if (!servicos || servicos.length === 0) {
             tbody.append(`
                 <tr>
-                    <td colspan="5" class="text-center text-muted">
+                    <td colspan="6" class="text-center text-muted">
                         Nenhum serviço cadastrado
                     </td>
                 </tr>
@@ -97,21 +149,26 @@ class ServicosManager {
         }
 
         servicos.forEach(servico => {
+            // Usamos servico.id do JSON DB, não _id do MongoDB
+            const id = servico.id;
+            const nome = servico.name;
+            const preco = parseFloat(servico.price).toFixed(2);
+            const descricao = servico.description;
+
             const row = `
                 <tr>
-                    <td>${servico.nome}</td>
-                    <td>R$ ${parseFloat(servico.preco).toFixed(2)}</td>
-                    <td>${servico.profissional || 'Não informado'}</td>
-                    <td>${servico.tipo || 'Não informado'}</td>
-                    <td>
+                    <td>${nome}</td>
+                    <td>${descricao}</td>
+                    <td>R$ ${preco}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="text-center">
                         <div class="btn-group" role="group">
-                            <button servico-id="${servico._id}" class="btn btn-outline-primary btn-sm bt-alterar">
-                                <i class="bi bi-pencil"></i> Editar
+                            <button servico-id="${id}" servico-nome="${nome}" class="btn btn-success btn-sm bt-agendar" 
+                                    data-bs-toggle="modal" data-bs-target="#modal-agendar">
+                                <i class="bi bi-calendar-plus"></i> Agendar
                             </button>
-                            <button servico-id="${servico._id}" class="btn btn-outline-danger btn-sm bt-delete" 
-                                    data-bs-toggle="modal" data-bs-target="#modal-delete">
-                                <i class="bi bi-trash"></i> Excluir
-                            </button>
+                            <!-- Botões de edição e exclusão removidos/ocultados para o usuário comum -->
                         </div>
                     </td>
                 </tr>
@@ -121,185 +178,110 @@ class ServicosManager {
     }
 
     /**
-     * Abre modal para cadastro de novo serviço
+     * Abre o modal de agendamento
      */
-    abrirModalCadastro() {
-        this.limparFormulario();
-        $("#modal-title").text("Cadastrar Novo Serviço");
-        $("#bt-salvar").removeClass("d-none");
-        $("#bt-editar").addClass("d-none");
-        $("#modal-cadastrar").modal('show');
+    abrirModalAgendamento(id, nome) {
+        if (!localStorage.getItem('petvet_token')) {
+            this.showError('Você precisa estar logado para agendar um atendimento.');
+            $('#modal-agendar').modal('hide');
+            // Redireciona para login
+            setTimeout(() => window.location.href = 'auth.html', 1500);
+            return;
+        }
+        
+        $("#agendar-servico-id").val(id);
+        $("#servico-selecionado-nome").text(nome);
+        $("#agendamentoMessage").addClass("d-none");
+
+        // Preenche o nome do dono com o nome do usuário logado, se disponível
+        const user = JSON.parse(localStorage.getItem('petvet_user'));
+        if (user && user.name) {
+            $("#ownerName").val(user.name);
+        } else {
+            $("#ownerName").val('');
+        }
+        
+        // Limpa outros campos
+        $("#petName").val('');
+        $("#appointmentDate").val('');
+        $("#appointmentTime").val('');
+        $("#notes").val('');
+        
+        $('#modal-agendar').modal('show');
     }
 
     /**
-     * Abre modal para edição de serviço
+     * Envia o agendamento para o backend
      */
-    async abrirModalEdicao(id) {
+    async agendarAtendimento() {
+        const servicoId = $("#agendar-servico-id").val();
+        const petName = $("#petName").val().trim();
+        const ownerName = $("#ownerName").val().trim();
+        const appointmentDate = $("#appointmentDate").val();
+        const appointmentTime = $("#appointmentTime").val();
+        const notes = $("#notes").val().trim();
+        const token = localStorage.getItem('petvet_token');
+
+        if (!petName || !ownerName || !appointmentDate || !appointmentTime) {
+            this.showError('Preencha todos os campos obrigatórios.', 'agendamentoMessage');
+            return;
+        }
+
         try {
-            const response = await $.getJSON(`${this.servidor}/api/servicos/${id}`);
-            const servico = response.dados || response;
-
-            $("#id-selecionado").val(id);
-            $("#nome").val(servico.nome);
-            $("#preco").val(parseFloat(servico.preco).toFixed(2));
-            $("#funcionario").val(servico.profissional || '');
-
-            // Selecionar tipo de serviço
-            $('[name="tipo"]').each(function() {
-                $(this).prop("checked", $(this).val() === servico.tipo);
+            const response = await fetch(`${this.servidor}/appointments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    servicoId,
+                    petName,
+                    ownerName,
+                    appointmentDate,
+                    appointmentTime,
+                    notes
+                })
             });
 
-            $("#modal-title").text("Editar Serviço");
-            $("#bt-editar").removeClass("d-none");
-            $("#bt-salvar").addClass("d-none");
-            $("#modal-cadastrar").modal('show');
+            const data = await response.json();
 
-        } catch (error) {
-            console.error('Erro ao carregar serviço:', error);
-            this.showError('Erro ao carregar dados do serviço');
-        }
-    }
-
-    /**
-     * Salva um novo serviço
-     */
-    async salvarServico() {
-        try {
-            const dadosServico = this.coletarDadosFormulario();
-            
-            if (!this.validarDados(dadosServico)) {
-                return;
+            if (response.ok) {
+                $('#modal-agendar').modal('hide');
+                this.showSuccess('Atendimento agendado com sucesso! Aguarde a confirmação.');
+            } else {
+                this.showError(data.erro || data.mensagem || 'Erro ao agendar atendimento.', 'agendamentoMessage');
             }
 
-            await $.post(`${this.servidor}/api/servicos`, dadosServico);
-            
-            $("#modal-cadastrar").modal('hide');
-            this.showSuccess('Serviço cadastrado com sucesso!');
-            this.listarServicos();
-            this.limparFormulario();
-
         } catch (error) {
-            console.error('Erro ao salvar serviço:', error);
-            this.showError('Erro ao cadastrar serviço');
+            console.error('Erro de rede/servidor:', error);
+            this.showError('Erro de conexão com o servidor.', 'agendamentoMessage');
         }
     }
 
-    /**
-     * Edita um serviço existente
-     */
-    async editarServico() {
-        try {
-            const id = $("#id-selecionado").val();
-            const dadosServico = this.coletarDadosFormulario();
-            
-            if (!this.validarDados(dadosServico)) {
-                return;
-            }
+    // Métodos de CRUD de Serviço (Manter por compatibilidade, mas não serão usados pelo usuário comum)
+    abrirModalCadastro() { /* ... */ }
+    abrirModalEdicao(id) { /* ... */ }
+    salvarServico() { /* ... */ }
+    editarServico() { /* ... */ }
+    prepararExclusao(id) { /* ... */ }
+    confirmarExclusao() { /* ... */ }
+    coletarDadosFormulario() { /* ... */ }
+    validarDados(dados) { /* ... */ }
+    limparFormulario() { /* ... */ }
 
-            await $.ajax({
-                url: `${this.servidor}/api/servicos/${id}`,
-                method: 'PUT',
-                data: JSON.stringify(dadosServico),
-                contentType: 'application/json'
-            });
-            
-            $("#modal-cadastrar").modal('hide');
-            this.showSuccess('Serviço atualizado com sucesso!');
-            this.listarServicos();
-            this.limparFormulario();
-
-        } catch (error) {
-            console.error('Erro ao editar serviço:', error);
-            this.showError('Erro ao atualizar serviço');
-        }
-    }
-
-    /**
-     * Prepara a exclusão de um serviço
-     */
-    prepararExclusao(id) {
-        $("#id-selecionado").val(id);
-    }
-
-    /**
-     * Confirma e executa a exclusão
-     */
-    async confirmarExclusao() {
-        try {
-            const id = $("#id-selecionado").val();
-            
-            await $.ajax({
-                url: `${this.servidor}/api/servicos/${id}`,
-                method: 'DELETE'
-            });
-            
-            $("#modal-delete").modal('hide');
-            this.showSuccess('Serviço excluído com sucesso!');
-            this.listarServicos();
-
-        } catch (error) {
-            console.error('Erro ao excluir serviço:', error);
-            this.showError('Erro ao excluir serviço');
-        }
-    }
-
-    /**
-     * Coleta dados do formulário
-     */
-    coletarDadosFormulario() {
-        return {
-            nome: $("#nome").val().trim(),
-            preco: $("#preco").val(),
-            profissional: $("#funcionario").val().trim(),
-            tipo: $('[name="tipo"]:checked').val()
-        };
-    }
-
-    /**
-     * Valida os dados do formulário
-     */
-    validarDados(dados) {
-        if (!dados.nome) {
-            this.showError('Nome do serviço é obrigatório');
-            return false;
-        }
-
-        if (!dados.preco || parseFloat(dados.preco) <= 0) {
-            this.showError('Preço deve ser maior que zero');
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Limpa o formulário
-     */
-    limparFormulario() {
-        $("#nome, #funcionario, #preco").val("");
-        $('[name="tipo"]').prop("checked", false);
-        $("#id-selecionado").val("");
-    }
-
-    /**
-     * Exibe mensagem de sucesso
-     */
+    // Métodos de UI
     showSuccess(mensagem) {
         $("#msg-sucesso").removeClass("d-none").find(".alert-text").text(mensagem);
         setTimeout(() => $("#msg-sucesso").addClass("d-none"), 5000);
     }
 
-    /**
-     * Exibe mensagem de erro
-     */
-    showError(mensagem) {
-        $("#msg-erro").removeClass("d-none").find(".alert-text").text(mensagem);
-        setTimeout(() => $("#msg-erro").addClass("d-none"), 5000);
+    showError(mensagem, elementId = 'msg-erro') {
+        const element = $(`#${elementId}`);
+        element.removeClass("d-none").find(".alert-text").text(mensagem);
+        setTimeout(() => element.addClass("d-none"), 5000);
     }
 
-    /**
-     * Controla o indicador de carregamento
-     */
     showLoading(show) {
         if (show) {
             $("#loading").removeClass("d-none");
@@ -311,3 +293,6 @@ class ServicosManager {
 
 // Inicializar o gerenciador quando o documento estiver pronto
 const servicosManager = new ServicosManager();
+
+// Expor funções globais necessárias para o HTML
+window.handleAuthClick = servicosManager.handleAuthClick.bind(servicosManager);

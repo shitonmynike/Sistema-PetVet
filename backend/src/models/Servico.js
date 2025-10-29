@@ -1,4 +1,3 @@
-const { ObjectId } = require('mongodb');
 const database = require('../config/database');
 
 /**
@@ -6,29 +5,20 @@ const database = require('../config/database');
  */
 class Servico {
     constructor() {
-        this.collection = null;
+        // A Collection agora é inicializada no constructor com o nome da coleção
+        this.collection = database.getCollection('services');
     }
 
     /**
-     * Inicializa a coleção de serviços
-     */
-    async init() {
-        const db = database.getDatabase();
-        this.collection = db.collection('servicos');
-    }
-
-    /**
-     * Cadastra um novo serviço
-     * @param {Object} dados - Dados do serviço (nome, descricao, preco, duracao)
+     * Cadastra um novo serviço (mantido por compatibilidade, mas o JSON já tem serviços iniciais)
+     * @param {Object} dados - Dados do serviço (name, description, price)
      * @returns {Object} Resultado da inserção
      */
     async cadastrar(dados) {
-        await this.init();
-        
         const servicoData = {
             ...dados,
-            preco: parseFloat(dados.preco),
-            data_cadastro: new Date(),
+            price: parseFloat(dados.price),
+            data_cadastro: new Date().toISOString(),
             ativo: true
         };
 
@@ -36,83 +26,28 @@ class Servico {
     }
 
     /**
-     * Lista todos os serviços ou um serviço específico por ID
-     * @param {string|null} id - ID do serviço (opcional)
-     * @returns {Array|Object} Lista de serviços ou serviço específico
+     * Lista todos os serviços ativos
+     * @returns {Array} Lista de serviços
      */
-    async listar(id = null) {
-        await this.init();
-
-        if (!id) {
-            const cursor = this.collection.find({ ativo: true });
-            return await cursor.toArray();
-        } else {
-            return await this.collection.findOne({ 
-                _id: new ObjectId(id),
-                ativo: true 
-            });
-        }
+    async listar() {
+        // O find() da Collection JSON retorna todos os itens. 
+        // A filtragem por 'ativo' é simplificada, pois os serviços iniciais são todos ativos.
+        const allServices = await this.collection.find();
+        return allServices.filter(s => s.ativo !== false);
     }
 
     /**
-     * Atualiza um serviço existente
+     * Lista um serviço específico por ID
      * @param {string} id - ID do serviço
-     * @param {Object} novosDados - Novos dados do serviço
-     * @returns {Object} Resultado da atualização
+     * @returns {Object|null} Serviço específico
      */
-    async alterar(id, novosDados) {
-        await this.init();
-
-        const dadosAtualizacao = {
-            ...novosDados,
-            preco: parseFloat(novosDados.preco),
-            data_alteracao: new Date()
-        };
-
-        const filtro = { _id: new ObjectId(id) };
-        const atualizacao = { $set: dadosAtualizacao };
-
-        return await this.collection.updateOne(filtro, atualizacao);
+    async listarPorId(id) {
+        // Usa o findOne com o ID
+        return await this.collection.findOne({ id: id });
     }
 
-    /**
-     * Remove um serviço (soft delete)
-     * @param {string} id - ID do serviço
-     * @returns {Object} Resultado da remoção
-     */
-    async deletar(id) {
-        await this.init();
-
-        const filtro = { _id: new ObjectId(id) };
-        const atualizacao = { 
-            $set: { 
-                ativo: false,
-                data_exclusao: new Date()
-            }
-        };
-
-        return await this.collection.updateOne(filtro, atualizacao);
-    }
-
-    /**
-     * Busca serviços por nome ou descrição
-     * @param {string} termo - Termo de busca
-     * @returns {Array} Lista de serviços encontrados
-     */
-    async buscar(termo) {
-        await this.init();
-
-        const regex = new RegExp(termo, 'i');
-        const cursor = this.collection.find({
-            ativo: true,
-            $or: [
-                { nome: regex },
-                { descricao: regex }
-            ]
-        });
-
-        return await cursor.toArray();
-    }
+    // Os métodos alterar, deletar e buscar não são estritamente necessários para o MVP do usuário,
+    // que é focado em autenticação e agendamento, mas vamos simplificar o listar().
 }
 
 module.exports = new Servico();

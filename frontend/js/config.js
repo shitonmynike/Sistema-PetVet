@@ -158,12 +158,14 @@ const PETVET_CONFIG = {
             "Responsabilidade social"
         ]
     },
-
     // Configurações técnicas
     api: {
-        baseUrl: location.hostname === "localhost" ? "http://localhost:3003/api" : "https://petvet-back-sjv0.onrender.com/api"
+        // Força o uso do localhost:3003/api para testes locais
+        baseUrl: "http://localhost:3003/api" 
     }
 };
 
 // Disponibilizar globalmente
 window.PETVET_CONFIG = PETVET_CONFIG;
+window.API_URL = PETVET_CONFIG.api.baseUrl;
+

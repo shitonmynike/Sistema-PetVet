@@ -3,6 +3,7 @@
  */
 class Dashboard {
     constructor() {
+        this.servidor = window.API_URL;
         this.init();
     }
 
@@ -14,6 +15,7 @@ class Dashboard {
             this.carregarInformacoes();
             this.configurarEventListeners();
             this.atualizarHorario();
+            this.carregarMeusAgendamentos(); // NOVO: Carregar agendamentos do usuário
         });
     }
 
@@ -52,27 +54,21 @@ class Dashboard {
     }
 
     /**
-     * Atualiza as estatísticas do dashboard
+     * Atualiza as estatísticas do dashboard (Simulado, pois não temos dados de admin)
      */
     async atualizarEstatisticas() {
-        try {
-            // Simular dados (em uma implementação real, viria da API)
-            const estatisticas = {
-                agendamentosHoje: Math.floor(Math.random() * 15) + 5,
-                agendamentosPendentes: Math.floor(Math.random() * 8) + 1,
-                agendamentosConcluidos: Math.floor(Math.random() * 10) + 3,
-                totalClientes: Math.floor(Math.random() * 50) + 100
-            };
+        // Manter a simulação para os cards, já que o foco é o agendamento do usuário
+        const estatisticas = {
+            agendamentosHoje: Math.floor(Math.random() * 15) + 5,
+            agendamentosPendentes: Math.floor(Math.random() * 8) + 1,
+            agendamentosConcluidos: Math.floor(Math.random() * 10) + 3,
+            totalClientes: Math.floor(Math.random() * 50) + 100
+        };
 
-            // Atualizar na interface com animação
-            this.animarContador('#agendamentos-hoje', estatisticas.agendamentosHoje);
-            this.animarContador('#agendamentos-pendentes', estatisticas.agendamentosPendentes);
-            this.animarContador('#agendamentos-concluidos', estatisticas.agendamentosConcluidos);
-            this.animarContador('#total-clientes', estatisticas.totalClientes);
-
-        } catch (error) {
-            console.error('Erro ao atualizar estatísticas:', error);
-        }
+        this.animarContador('#agendamentos-hoje', estatisticas.agendamentosHoje);
+        this.animarContador('#agendamentos-pendentes', estatisticas.agendamentosPendentes);
+        this.animarContador('#agendamentos-concluidos', estatisticas.agendamentosConcluidos);
+        this.animarContador('#total-clientes', estatisticas.totalClientes);
     }
 
     /**
@@ -111,7 +107,6 @@ class Dashboard {
         
         const horarioFormatado = agora.toLocaleDateString('pt-BR', opcoes);
         
-        // Adicionar horário no cabeçalho se não existir
         if (!$('#horario-atual').length) {
             $('.btn-toolbar').prepend(`
                 <div class="me-3">
@@ -122,50 +117,40 @@ class Dashboard {
             $('#horario-atual').text(horarioFormatado);
         }
 
-        // Atualizar a cada minuto
         setTimeout(() => this.atualizarHorario(), 60000);
     }
 
     /**
-     * Carrega agendamentos do dia (simulado)
+     * NOVO: Carrega os agendamentos do usuário logado
      */
-    async carregarAgendamentosHoje() {
-        try {
-            // Em uma implementação real, isso viria da API
-            const agendamentos = [
-                {
-                    id: 1,
-                    pet: 'Paçoca',
-                    tutor: 'João Silva',
-                    servico: 'Banho e Tosa',
-                    profissional: 'Carla Mendes',
-                    horario: '10:30',
-                    status: 'confirmado'
-                },
-                {
-                    id: 2,
-                    pet: 'Mimi',
-                    tutor: 'Maria Santos',
-                    servico: 'Consulta Veterinária',
-                    profissional: 'Dr. Carlos Silva',
-                    horario: '14:00',
-                    status: 'aguardando'
-                },
-                {
-                    id: 3,
-                    pet: 'Rex',
-                    tutor: 'Pedro Costa',
-                    servico: 'Vacinação V10',
-                    profissional: 'Dra. Ana Santos',
-                    horario: '16:30',
-                    status: 'agendado'
-                }
-            ];
+    async carregarMeusAgendamentos() {
+        const token = localStorage.getItem('petvet_token');
+        const user = JSON.parse(localStorage.getItem('petvet_user'));
+        
+        if (!token || !user) {
+            this.renderizarAgendamentos([]); // Renderiza lista vazia se não estiver logado
+            return;
+        }
 
-            this.renderizarAgendamentos(agendamentos);
+        try {
+            const response = await fetch(`${this.servidor}/appointments/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const agendamentos = await response.json();
+                this.renderizarAgendamentos(agendamentos);
+            } else {
+                console.error('Falha ao carregar agendamentos:', await response.json());
+                this.renderizarAgendamentos([]);
+            }
 
         } catch (error) {
-            console.error('Erro ao carregar agendamentos:', error);
+            console.error('Erro de rede ao carregar agendamentos:', error);
+            this.renderizarAgendamentos([]);
         }
     }
 
@@ -180,15 +165,34 @@ class Dashboard {
             container.html(`
                 <div class="text-center py-4">
                     <i class="bi bi-calendar-x text-muted fs-1"></i>
-                    <p class="text-muted mt-2">Nenhum agendamento para hoje</p>
+                    <p class="text-muted mt-2">Nenhum agendamento encontrado.</p>
+                    <p class="text-muted mt-0 small">Faça login e agende um serviço na página de Serviços.</p>
                 </div>
             `);
             return;
         }
 
-        agendamentos.forEach(agendamento => {
+        // Filtra para mostrar apenas os agendamentos de hoje
+        const hoje = new Date().toISOString().split('T')[0];
+        const agendamentosHoje = agendamentos.filter(a => a.appointmentDate === hoje);
+
+        if (agendamentosHoje.length === 0) {
+             container.html(`
+                <div class="text-center py-4">
+                    <i class="bi bi-calendar-x text-muted fs-1"></i>
+                    <p class="text-muted mt-2">Nenhum agendamento para hoje.</p>
+                </div>
+            `);
+            return;
+        }
+
+        agendamentosHoje.forEach(agendamento => {
             const statusClass = this.getStatusClass(agendamento.status);
             const statusText = this.getStatusText(agendamento.status);
+            
+            // Formatar data e hora para exibição
+            const [hora, minuto] = agendamento.appointmentTime.split(':');
+            const horarioFormatado = `${hora}:${minuto}`;
 
             const item = `
                 <div class="appointment-card list-group-item d-flex gap-3 py-3">
@@ -197,14 +201,14 @@ class Dashboard {
                     </div>
                     <div class="d-flex gap-2 w-100 justify-content-between">
                         <div>
-                            <h6 class="mb-0">${agendamento.pet} - ${agendamento.tutor}</h6>
-                            <p class="mb-0 text-muted">${agendamento.servico}</p>
+                            <h6 class="mb-0">${agendamento.petName} - ${agendamento.ownerName}</h6>
+                            <p class="mb-0 text-muted">${agendamento.servicoName}</p>
                             <small class="text-success">
-                                <i class="bi bi-person-badge me-1"></i>${agendamento.profissional}
+                                <i class="bi bi-person-badge me-1"></i>${agendamento.status}
                             </small>
                         </div>
                         <div class="text-end">
-                            <small class="text-primary fw-bold">${agendamento.horario}</small>
+                            <small class="text-primary fw-bold">${horarioFormatado}</small>
                             <br>
                             <span class="badge ${statusClass}">${statusText}</span>
                         </div>
@@ -221,11 +225,10 @@ class Dashboard {
      */
     getStatusClass(status) {
         const classes = {
-            'confirmado': 'bg-success',
-            'aguardando': 'bg-warning',
-            'agendado': 'bg-primary',
-            'cancelado': 'bg-danger',
-            'concluido': 'bg-secondary'
+            'Pendente': 'bg-warning',
+            'Confirmado': 'bg-success',
+            'Cancelado': 'bg-danger',
+            'Concluído': 'bg-secondary'
         };
         return classes[status] || 'bg-secondary';
     }
@@ -234,14 +237,7 @@ class Dashboard {
      * Retorna o texto do status
      */
     getStatusText(status) {
-        const textos = {
-            'confirmado': 'Confirmado',
-            'aguardando': 'Aguardando',
-            'agendado': 'Agendado',
-            'cancelado': 'Cancelado',
-            'concluido': 'Concluído'
-        };
-        return textos[status] || 'Indefinido';
+        return status || 'Indefinido';
     }
 }
 

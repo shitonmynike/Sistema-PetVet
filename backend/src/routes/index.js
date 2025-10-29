@@ -3,6 +3,8 @@ const router = express.Router();
 
 // Importar rotas específicas
 const servicoRoutes = require('./servicoRoutes');
+const authRoutes = require('./authRoutes');
+const appointmentRoutes = require('./appointmentRoutes');
 
 /**
  * Configuração central de rotas da API
@@ -19,6 +21,8 @@ router.get('/', (req, res) => {
 
 // Rotas de serviços
 router.use('/servicos', servicoRoutes);
+router.use('/auth', authRoutes);
+router.use('/appointments', appointmentRoutes);
 
 // Middleware para rotas não encontradas
 router.use('*', (req, res) => {

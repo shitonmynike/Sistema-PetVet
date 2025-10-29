@@ -1,0 +1,30 @@
+{
+    "users": [],
+    "appointments": [],
+    "services": [
+        {
+            "id": "s1",
+            "name": "Consulta Veterinária",
+            "description": "Exame clínico completo.",
+            "price": 80
+        },
+        {
+            "id": "s2",
+            "name": "Vacinação",
+            "description": "Aplicação de vacinas essenciais.",
+            "price": 50
+        },
+        {
+            "id": "s3",
+            "name": "Banho e Tosa",
+            "description": "Serviço completo de higiene e estética.",
+            "price": 45
+        },
+        {
+            "id": "s4",
+            "name": "Exames Laboratoriais",
+            "description": "Análises de sangue, urina e fezes.",
+            "price": 120
+        }
+    ]
+}
